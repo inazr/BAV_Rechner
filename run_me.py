@@ -19,17 +19,15 @@ Geburtsdatum = datetime.strptime('14.11.1986', '%d.%m.%Y')
 '''
     IdR: 01. des Monats nach dem 67. Geburtstag
     Mit Abzug: frühestens nach dem 63. Geburstag
-    Mit GdB von >= 50: frühestens nach dem 62. Geburstag
 '''
 Renteneintritt = datetime.strptime('01.12.2053', '%d.%m.%Y')
-
 
 Bruttoeinkommen = 48000
 Gehaltssteigerung_e = 0.02
 
 BAV_Vertragsbeginn = datetime.strptime('01.04.2020', '%d.%m.%Y')
 BAV_Bruttobeitrag = 2400
-BAV_ST_Zuschuss = 0.15
+BAV_Zuschuss = 0.15
 BAV_TER = 0.01
 
 Freistellungsauftrag: 801   # Verheiratet: max 1.602 €, Alleinstehend: max. 801 €
@@ -154,7 +152,7 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=True, GKV_Zusatzbeitrag=0.01
 def calc_Renteneintritt_Abzug():
     RegelRenteneintritt = datetime(Geburtsdatum.year + 67, Geburtsdatum.month + 1, 1)
 
-    if (abs(Renteneintritt.year - RegelRenteneintritt.year) * 12 - (Renteneintritt.month - RegelRenteneintritt.month)) > 60:
+    if (abs(Renteneintritt.year - RegelRenteneintritt.year) * 12 - (Renteneintritt.month - RegelRenteneintritt.month)) > 48:
         print("Rentenbeginn zu früh gewählt!")
         exit()
 
@@ -168,6 +166,7 @@ def calc_Verlust_Rente():
     JahreBisZurRente = abs(BAV_Vertragsbeginn.year - Renteneintritt.year)
 
     Rentenpunkte = Bruttoeinkommen / DurchschnittsentgeltRentenversicherung_2020 * JahreBisZurRente
+
     print("\n")
     print("Rentenpunkte: " + str(round(Rentenpunkte, 2)))
     print("Rentenwert: " + str(round(Rentenpunkte * RP_Wert, 2)) + " €")
