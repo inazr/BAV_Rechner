@@ -23,26 +23,27 @@ Geburtsdatum = datetime.strptime('14.11.1986', '%d.%m.%Y')
 '''
 Renteneintritt = datetime.strptime('01.12.2053', '%d.%m.%Y')
 
-BAV_Vertragsbeginn = datetime.strptime('01.04.2020', '%d.%m.%Y')
 
 Bruttoeinkommen = 48000
 Gehaltssteigerung_e = 0.02
 
+BAV_Vertragsbeginn = datetime.strptime('01.04.2020', '%d.%m.%Y')
 BAV_Bruttobeitrag = 2400
 BAV_ST_Zuschuss = 0.15
+BAV_TER = 0.01
 
 Freistellungsauftrag: 801   # Verheiratet: max 1.602 €, Alleinstehend: max. 801 €
 Kapitalmarktzins_e = 0.05
 
 # Krankenversicherung
-GKV: True
-GKV_Zusatzbeitrag = 0.07
-PKV: False
-PKV_Beitrag: 0
+GKV = True
+GKV_Zusatzbeitrag = 0.007
+PKV = False
+PKV_Beitrag = 0
 
 # Sonstige Angaben
-Kinder: False
-Kirche: False
+Kinder = False
+Kirche = False
 
 
 '''
@@ -66,15 +67,16 @@ RV_Beitragsbemessungsgrenze = 82800
 AV_Beitragsbemessungsgrenze = 82800
 
 # Entwicklung durchschnittsentgelt
-durchschnittsentgelt_rentenversicherung_2020 = 40551
-durchschnittsentgelt_rentenversicherung = 0.0185
-
+DurchschnittsentgeltRentenversicherung_2020 = 40551
+DurchschnittsentgeltRentenversicherung = 0.0185
+Rentenabzug_proMonat = 0.003
+RP_Wert = 33.05
 
 '''
 In diesem Abschnitt bitte - KEINE - Änderungen vornehmen:
 '''
 
-def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV, GKV_Zusatzbeitrag, PKV, PKV_Beitrag, Kinder, Kirche):
+def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=True, GKV_Zusatzbeitrag=0.01, PKV=False, PKV_Beitrag=0, Kinder=False, Kirche=True):
 
     if GKV:
         KV_Beitragssatz = (GKV_Beitragssatz + GKV_Zusatzbeitrag) * 0.5
@@ -126,10 +128,10 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV, GKV_Zusatzbeitrag, PKV, PKV
     else:
         print("Fehler bei der Steuerberechnung.")
 
-    Soli = Lohnsteuer * 0.055
+    Soli = Lohnsteuer * Solidaritaetszuschlag
 
     if Kirche:
-        Kirchensteuer = Lohnsteuer * 0.09
+        Kirchensteuer = Lohnsteuer * Kirchensteuer
     else:
         Kirchensteuer = 0
 
@@ -140,35 +142,50 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV, GKV_Zusatzbeitrag, PKV, PKV
 
     Nettoeinkommen = Bruttoeinkommen - KV - AV - PV - RV - Lohnsteuer - Soli - Kirchensteuer
 
-    print(str(KV) + " € Krankenversicherung")
-    print(str(PV) + " € Pflegeversicherung")
-    print(str(RV) + " € Rentenversicherung")
-    print(str(AV) + " € Arbeitslosenversicherung")
-    print(str(zvE) + " € zu versteuerndes Einkommen")
-    print(str(Lohnsteuer) + " € Lohnsteuer")
-    print(str(Soli) + " € Soli")
-    print(str(Kirchensteuer) + " € Kirchensteuer")
-    print(str(Nettoeinkommen) + " € Nettoeinkommen")
+    print("Krankenversicherung: " + str(KV) + " € | Pflegeversicherung: " + str(PV) + " € | Rentenversicherung: " + str(RV)
+          + " € | Arbeitslosenversicherung: " + str(AV) + " € | Lohnsteuer: "
+          + str(Lohnsteuer) + " € | Solidaritaetszuschlag: " + str(Soli) + " € | Kirchensteuer: " + str(Kirchensteuer))
+
+    print("Nettoeinkommen: " + str(Nettoeinkommen) + " €" )
 
     return KV, AV, PV, RV, zvE, Lohnsteuer, Soli, Kirchensteuer, Nettoeinkommen
 
 
+def calc_Renteneintritt_Abzug():
+    RegelRenteneintritt = datetime(Geburtsdatum.year + 67, Geburtsdatum.month + 1, 1)
+
+    if (abs(Renteneintritt.year - RegelRenteneintritt.year) * 12 - (Renteneintritt.month - RegelRenteneintritt.month)) > 60:
+        print("Rentenbeginn zu früh gewählt!")
+        exit()
+
+    Rentenabzug = Rentenabzug_proMonat * (abs(Renteneintritt.year - RegelRenteneintritt.year) * 12 - (Renteneintritt.month - RegelRenteneintritt.month))
+    Rentenabzug = round(Rentenabzug, 4)
+
+    return RegelRenteneintritt, Rentenabzug
 
 
-def calc_Verlust_Rentenpunkte(Bruttoeinkommen):
+def calc_Verlust_Rente():
+    JahreBisZurRente = abs(BAV_Vertragsbeginn.year - Renteneintritt.year)
+
+    Rentenpunkte = Bruttoeinkommen / DurchschnittsentgeltRentenversicherung_2020 * JahreBisZurRente
+    print("\n")
+    print("Rentenpunkte: " + str(round(Rentenpunkte, 2)))
+    print("Rentenwert: " + str(round(Rentenpunkte * RP_Wert, 2)) + " €")
+
+    BAV_Rentenpunkte = BAV_Bruttoeinkommen / DurchschnittsentgeltRentenversicherung_2020 * JahreBisZurRente
+    print("\n")
+    print("BAV_Rentenpunkte: " + str(round(BAV_Rentenpunkte, 2)))
+    print("BAV_Rentenwert: " + str(round(BAV_Rentenpunkte * RP_Wert, 2)) + " €")
 
 
 if __name__ == "__main__":
-    print("YOUR MILEAGE MY VARY!")
+    print("\n")
+    print("!!!   Alle Angaben ohne Gewähr   !!!")
+    print("\n")
 
     KV, AV, PV, RV, zvE, Lohnsteuer, Soli, Kirchensteuer, Nettoeinkommen = calc_steuern_sozialabgaben(
-        Bruttoeinkommen, person['GKV'], person['GKV Zusatzbeitrag'], person['PKV'], person['PKV Beitrag'],
-        person['Kinder'], person['Kirchensteuer'])
+        Bruttoeinkommen, GKV, GKV_Zusatzbeitrag, PKV, PKV_Beitrag, Kinder, Kirche)
 
+    RegelRenteneintritt, Rentenabzug = calc_Renteneintritt_Abzug()
 
-    _, _, _, _, _, _, _, _, Nettoeinkommen_BAV = calc_steuern_sozialabgaben(
-        Bruttoeinkommen_BAV, person['GKV'], person['GKV Zusatzbeitrag'], person['PKV'], person['PKV Beitrag'],
-        person['Kinder'], person['Kirchensteuer'])
-
-    BAV_Monatsbeitrag_Netto  = round((Nettoeinkommen - Nettoeinkommen_BAV )/ 12, 2)
-    print(BAV_Monatsbeitrag_Netto)
+    calc_Verlust_Rente()
