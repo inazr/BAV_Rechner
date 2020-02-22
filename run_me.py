@@ -125,7 +125,6 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=True, GKV_Zusatzbeitrag=0.01
         KV = PKV_Beitrag
         PV = 0
 
-
     AV_Bemessungssatz = min(Bruttoeinkommen, 82800)
     AV = AV_Bemessungssatz * AV_Beitragssatz * 0.5
 
