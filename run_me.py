@@ -28,7 +28,6 @@ Gehaltssteigerung_e = 0.02
 BAV_Vertragsbeginn = datetime.strptime('01.04.2020', '%d.%m.%Y')
 BAV_Bruttobeitrag = 2400
 BAV_Zuschuss = 0.15
-BAV_TER = 0.01
 
 Freistellungsauftrag: 801   # Verheiratet: max 1.602 €, Alleinstehend: max. 801 €
 Kapitalmarktzins_e = 0.05
@@ -144,7 +143,7 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=True, GKV_Zusatzbeitrag=0.01
           + " € | Arbeitslosenversicherung: " + str(AV) + " € | Lohnsteuer: "
           + str(Lohnsteuer) + " € | Solidaritaetszuschlag: " + str(Soli) + " € | Kirchensteuer: " + str(Kirchensteuer))
 
-    print("Nettoeinkommen: " + str(Nettoeinkommen) + " €" )
+    print("Nettoeinkommen: " + str(round(Nettoeinkommen, 2)) + " €" )
 
     return KV, AV, PV, RV, zvE, Lohnsteuer, Soli, Kirchensteuer, Nettoeinkommen
 
@@ -163,18 +162,25 @@ def calc_Renteneintritt_Abzug():
 
 
 def calc_Verlust_Rente():
-    JahreBisZurRente = abs(BAV_Vertragsbeginn.year - Renteneintritt.year)
+    JahreBisZurRente = abs(BAV_Vertragsbeginn.year - Renteneintritt.year) + abs(BAV_Vertragsbeginn.month - Renteneintritt.month)/12
+    # print(round(JahreBisZurRente, 2))
 
-    Rentenpunkte = Bruttoeinkommen / DurchschnittsentgeltRentenversicherung_2020 * JahreBisZurRente
+    Rentenpunkte = min(Bruttoeinkommen, RV_Beitragsbemessungsgrenze) / DurchschnittsentgeltRentenversicherung_2020 * JahreBisZurRente
+    Rentenwert = round(Rentenpunkte * RP_Wert, 2)
 
     print("\n")
     print("Rentenpunkte: " + str(round(Rentenpunkte, 2)))
-    print("Rentenwert: " + str(round(Rentenpunkte * RP_Wert, 2)) + " €")
+    print("Rentenwert: " + str(Rentenwert) + " €")
 
-    BAV_Rentenpunkte = BAV_Bruttoeinkommen / DurchschnittsentgeltRentenversicherung_2020 * JahreBisZurRente
-    print("\n")
+    BAV_Rentenpunkte = min(BAV_Bruttoeinkommen, RV_Beitragsbemessungsgrenze) / DurchschnittsentgeltRentenversicherung_2020 * JahreBisZurRente
+    BAV_Rentenwert = round(BAV_Rentenpunkte * RP_Wert, 2)
+
     print("BAV_Rentenpunkte: " + str(round(BAV_Rentenpunkte, 2)))
-    print("BAV_Rentenwert: " + str(round(BAV_Rentenpunkte * RP_Wert, 2)) + " €")
+    print("BAV_Rentenwert: " + str(BAV_Rentenwert) + " €")
+    print("\n")
+    print("Reduzierung der brutto Altersrente durch Abschluss einer BAV voraussichtlich um " + str(round(Rentenwert - BAV_Rentenwert, 2)) + " € pro Monat.")
+
+    return Rentenwert, BAV_Rentenwert
 
 
 if __name__ == "__main__":
@@ -182,9 +188,18 @@ if __name__ == "__main__":
     print("!!!   Alle Angaben ohne Gewähr   !!!")
     print("\n")
 
+    print("Einkommen ohne BAV: ")
     KV, AV, PV, RV, zvE, Lohnsteuer, Soli, Kirchensteuer, Nettoeinkommen = calc_steuern_sozialabgaben(
         Bruttoeinkommen, GKV, GKV_Zusatzbeitrag, PKV, PKV_Beitrag, Kinder, Kirche)
 
+    print("\n")
+    print("Einkommen mit BAV: ")
+    BAV_KV, BAV_AV, BAV_PV, BAV_RV, BAV_zvE, BAV_Lohnsteuer, BAV_Soli, BAV_Kirchensteuer, BAV_Nettoeinkommen = calc_steuern_sozialabgaben(
+        BAV_Bruttoeinkommen, GKV, GKV_Zusatzbeitrag, PKV, PKV_Beitrag, Kinder, Kirche)
+
+    print("\n")
+    print("Nettobelastung durch Abschluss einer BAV: " + str(round(Nettoeinkommen - BAV_Nettoeinkommen, 2)) + " €.")
+
     RegelRenteneintritt, Rentenabzug = calc_Renteneintritt_Abzug()
 
-    calc_Verlust_Rente()
+    Rentenpunkte, BAV_Rentenpunkte = calc_Verlust_Rente()
