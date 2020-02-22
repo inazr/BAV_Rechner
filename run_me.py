@@ -31,6 +31,7 @@ BAV_Zuschuss = 0.15
 
 Freistellungsauftrag: 801   # Verheiratet: max 1.602 €, Alleinstehend: max. 801 €
 Kapitalmarktzins_e = 0.05
+ETF_TER = 0.01
 
 # Krankenversicherung
 GKV = True
@@ -73,6 +74,39 @@ RP_Wert = 33.05
 In diesem Abschnitt bitte - KEINE - Änderungen vornehmen:
 '''
 
+
+def calc_steuern(zvE):
+
+    if zvE <= 9408:
+        Lohnsteuer = 0
+
+    elif zvE <= 14532:
+        y = (zvE - 9408) / 10000
+        Lohnsteuer = (972.87 * y + 1400) * y
+
+    elif zvE <= 57051:
+        z = (zvE - 14532) / 10000
+        Lohnsteuer = (212.02 * z + 2397) * z + 972.79
+
+    elif zvE <= 270500:
+        Lohnsteuer = 0.42 * zvE - 8963.74
+
+    elif zvE > 270500:
+        Lohnsteuer = 0.45 * zvE - 17078.74
+
+    else:
+        print("Fehler bei der Steuerberechnung.")
+
+    Soli = Lohnsteuer * Solidaritaetszuschlag
+
+    if Kirche:
+        Kirchensteuer = Lohnsteuer * Kirchensteuer
+    else:
+        Kirchensteuer = 0
+
+    return Lohnsteuer, Soli, Kirchensteuer
+
+
 def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=True, GKV_Zusatzbeitrag=0.01, PKV=False, PKV_Beitrag=0, Kinder=False, Kirche=True):
 
     if GKV:
@@ -105,33 +139,7 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=True, GKV_Zusatzbeitrag=0.01
 
     zvE = math.floor(Bruttoeinkommen - KV - (0.9 * (AV + RV + PV)))
 
-    if zvE <= 9408:
-        Lohnsteuer = 0
-
-    elif zvE <= 14532:
-        y = (zvE - 9408) / 10000
-        Lohnsteuer = (972.87 * y + 1400) * y
-
-    elif zvE <= 57051:
-        z = (zvE - 14532) / 10000
-        Lohnsteuer = (212.02 * z + 2397) * z + 972.79
-
-    elif zvE <= 270500:
-        Lohnsteuer = 0.42 * zvE - 8963.74
-
-    elif zvE > 270500:
-        Lohnsteuer = 0.45 * zvE - 17078.74
-
-    else:
-        print("Fehler bei der Steuerberechnung.")
-
-    Soli = Lohnsteuer * Solidaritaetszuschlag
-
-    if Kirche:
-        Kirchensteuer = Lohnsteuer * Kirchensteuer
-    else:
-        Kirchensteuer = 0
-
+    Lohnsteuer, Soli, Kirchensteuer = calc_steuern(zvE)
 
     Lohnsteuer = math.floor(Lohnsteuer)
     Soli = round(Soli, 2)
@@ -139,16 +147,10 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=True, GKV_Zusatzbeitrag=0.01
 
     Nettoeinkommen = Bruttoeinkommen - KV - AV - PV - RV - Lohnsteuer - Soli - Kirchensteuer
 
-    print("Krankenversicherung: " + str(KV) + " € | Pflegeversicherung: " + str(PV) + " € | Rentenversicherung: " + str(RV)
-          + " € | Arbeitslosenversicherung: " + str(AV) + " € | Lohnsteuer: "
-          + str(Lohnsteuer) + " € | Solidaritaetszuschlag: " + str(Soli) + " € | Kirchensteuer: " + str(Kirchensteuer))
-
-    print("Nettoeinkommen: " + str(round(Nettoeinkommen, 2)) + " €" )
-
     return KV, AV, PV, RV, zvE, Lohnsteuer, Soli, Kirchensteuer, Nettoeinkommen
 
 
-def calc_Renteneintritt_Abzug():
+def calc_Altersrente():
     RegelRenteneintritt = datetime(Geburtsdatum.year + 67, Geburtsdatum.month + 1, 1)
 
     if (abs(Renteneintritt.year - RegelRenteneintritt.year) * 12 - (Renteneintritt.month - RegelRenteneintritt.month)) > 48:
@@ -158,48 +160,62 @@ def calc_Renteneintritt_Abzug():
     Rentenabzug = Rentenabzug_proMonat * (abs(Renteneintritt.year - RegelRenteneintritt.year) * 12 - (Renteneintritt.month - RegelRenteneintritt.month))
     Rentenabzug = round(Rentenabzug, 4)
 
-    return RegelRenteneintritt, Rentenabzug
-
-
-def calc_Verlust_Rente():
     JahreBisZurRente = abs(BAV_Vertragsbeginn.year - Renteneintritt.year) + abs(BAV_Vertragsbeginn.month - Renteneintritt.month)/12
     # print(round(JahreBisZurRente, 2))
 
     Rentenpunkte = min(Bruttoeinkommen, RV_Beitragsbemessungsgrenze) / DurchschnittsentgeltRentenversicherung_2020 * JahreBisZurRente
-    Rentenwert = round(Rentenpunkte * RP_Wert, 2)
+    Rentenwert = round(Rentenpunkte * RP_Wert * (1 - Rentenabzug), 2)
 
     print("\n")
     print("Rentenpunkte: " + str(round(Rentenpunkte, 2)))
     print("Rentenwert: " + str(Rentenwert) + " €")
 
     BAV_Rentenpunkte = min(BAV_Bruttoeinkommen, RV_Beitragsbemessungsgrenze) / DurchschnittsentgeltRentenversicherung_2020 * JahreBisZurRente
-    BAV_Rentenwert = round(BAV_Rentenpunkte * RP_Wert, 2)
+    BAV_Rentenwert = round(BAV_Rentenpunkte * RP_Wert * (1 - Rentenabzug), 2)
 
     print("BAV_Rentenpunkte: " + str(round(BAV_Rentenpunkte, 2)))
     print("BAV_Rentenwert: " + str(BAV_Rentenwert) + " €")
     print("\n")
     print("Reduzierung der brutto Altersrente durch Abschluss einer BAV voraussichtlich um " + str(round(Rentenwert - BAV_Rentenwert, 2)) + " € pro Monat.")
 
-    return Rentenwert, BAV_Rentenwert
+    return RegelRenteneintritt, Rentenabzug, Rentenpunkte, BAV_Rentenpunkte
 
+def calc_ETF_Sparplan():
+    pass
 
 if __name__ == "__main__":
     print("\n")
     print("!!!   Alle Angaben ohne Gewähr   !!!")
+    print("Dieses Angebot stellt keine Beratung dar.")
+    print("Die Berechnung erfolgt nach besten Wissen und Gewissem.")
     print("\n")
 
     print("Einkommen ohne BAV: ")
     KV, AV, PV, RV, zvE, Lohnsteuer, Soli, Kirchensteuer, Nettoeinkommen = calc_steuern_sozialabgaben(
         Bruttoeinkommen, GKV, GKV_Zusatzbeitrag, PKV, PKV_Beitrag, Kinder, Kirche)
 
+    print("Krankenversicherung: " + str(KV) + " € | Pflegeversicherung: " + str(PV) + " € | Rentenversicherung: " + str(
+        RV)
+          + " € | Arbeitslosenversicherung: " + str(AV) + " € | Lohnsteuer: "
+          + str(Lohnsteuer) + " € | Solidaritaetszuschlag: " + str(Soli) + " € | Kirchensteuer: " + str(Kirchensteuer))
+
+    print("Nettoeinkommen: " + str(round(Nettoeinkommen, 2)) + " €")
+
     print("\n")
     print("Einkommen mit BAV: ")
     BAV_KV, BAV_AV, BAV_PV, BAV_RV, BAV_zvE, BAV_Lohnsteuer, BAV_Soli, BAV_Kirchensteuer, BAV_Nettoeinkommen = calc_steuern_sozialabgaben(
         BAV_Bruttoeinkommen, GKV, GKV_Zusatzbeitrag, PKV, PKV_Beitrag, Kinder, Kirche)
 
+    print("Krankenversicherung: " + str(KV) + " € | Pflegeversicherung: " + str(PV) + " € | Rentenversicherung: " + str(
+        RV)
+          + " € | Arbeitslosenversicherung: " + str(AV) + " € | Lohnsteuer: "
+          + str(Lohnsteuer) + " € | Solidaritaetszuschlag: " + str(Soli) + " € | Kirchensteuer: " + str(Kirchensteuer))
+
+    print("Nettoeinkommen: " + str(round(Nettoeinkommen, 2)) + " €")
+
     print("\n")
     print("Nettobelastung durch Abschluss einer BAV: " + str(round(Nettoeinkommen - BAV_Nettoeinkommen, 2)) + " €.")
 
-    RegelRenteneintritt, Rentenabzug = calc_Renteneintritt_Abzug()
+    RegelRenteneintritt, Rentenabzug, Rentenpunkte, BAV_Rentenpunkte = calc_Altersrente()
 
-    Rentenpunkte, BAV_Rentenpunkte = calc_Verlust_Rente()
+
