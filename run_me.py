@@ -4,50 +4,34 @@ Allgemeine Informationen:
 Bei Fragen: Stephan@BI
 Die Berechnungen funktionieren bei Ehegattensplitting (noch) nicht.
 Alle Angaben ohne Gewähr!
+Bitte Änderungen ausschließlich in Personendaten.py durchführen.
+Annahmen: Wohnhaft in NRW, Sozialversicherungspflichtig in D
 '''
 
 import pandas as pd
 from datetime import datetime
 from datetime import timedelta
 import math
-
-'''
-In diesem Abschnitt bitte Änderungen vornehmen:
-Alle Angaben p.a. !
-'''
-Geburtsdatum = datetime.strptime('14.11.1986', '%d.%m.%Y')
-'''
-    IdR: 01. des Monats nach dem 67. Geburtstag
-    Mit Abzug: frühestens nach dem 63. Geburstag
-'''
-Renteneintritt = datetime.strptime('01.12.2053', '%d.%m.%Y')
-
-Bruttoeinkommen = 48000
-Gehaltssteigerung_e = 0.02
-
-BAV_Vertragsbeginn = datetime.strptime('01.04.2020', '%d.%m.%Y')
-BAV_Bruttobeitrag = 2400
-BAV_Zuschuss = 0.15
-
-Freistellungsauftrag: 801   # Verheiratet: max 1.602 €, Alleinstehend: max. 801 €
-Kapitalmarktzins_e = 0.05
-ETF_TER = 0.01
-
-# Krankenversicherung
-GKV = True
-GKV_Zusatzbeitrag = 0.007
-PKV = False
-PKV_Beitrag = 0
-
-# Sonstige Angaben
-Kinder = False
-Kirche = False
+import Personendaten
 
 
-'''
-In diesem Abschnitt bitte nur Änderungen vornehmen, wenn du weißt was du tust:
-'''
+Geburtsdatum = datetime.strptime(Personendaten.Geburtsdatum, '%d.%m.%Y')
+Renteneintritt = datetime.strptime(Personendaten.Renteneintritt, '%d.%m.%Y')
+Bruttoeinkommen = Personendaten.Bruttoeinkommen
+BAV_Vertragsbeginn = datetime.strptime(Personendaten.BAV_Vertragsbeginn, '%d.%m.%Y')
+BAV_Bruttobeitrag = Personendaten.BAV_Bruttobeitrag_mtl * 12
 BAV_Bruttoeinkommen = Bruttoeinkommen - BAV_Bruttobeitrag
+BAV_Zuschuss = 0.15
+Freistellungsauftrag = Personendaten.Freistellungsauftrag
+Kapitalmarktzins_e = Personendaten.Kapitalmarktzins_e
+ETF_TER = Personendaten.ETF_TER
+GKV = Personendaten.GKV
+GKV_Zusatzbeitrag = Personendaten.GKV_Zusatzbeitrag
+PKV = Personendaten.PKV
+PKV_Beitrag = Personendaten.PKV_Beitrag_mtl
+Kinder = Personendaten.Kinder
+Kirche = Personendaten.Kirche
+
 
 # Beitragssätze 2020:
 GKV_Beitragssatz = 0.146
@@ -63,12 +47,14 @@ GKV_Beitragsbemessungsgrenze = 56250
 PV_Beitragsbemessungsgrenze = 56250
 RV_Beitragsbemessungsgrenze = 82800
 AV_Beitragsbemessungsgrenze = 82800
+BAV_Sozialabgabenfrei = RV_Beitragsbemessungsgrenze * 0.04
+BAV_Steuerfrei = RV_Beitragsbemessungsgrenze * 0.08
 
 # Entwicklung durchschnittsentgelt
-DurchschnittsentgeltRentenversicherung_2020 = 40551
-DurchschnittsentgeltRentenversicherung = 0.0185
-Rentenabzug_proMonat = 0.003
-RP_Wert = 33.05
+RV_Durchschnittsentgelt = 40551
+RV_Durchschnittsentgelt_wachstum = 0.0185
+RV_Abzug_proMonat = 0.003
+RV_RP_Wert = 33.05
 
 '''
 In diesem Abschnitt bitte - KEINE - Änderungen vornehmen:
@@ -156,21 +142,21 @@ def calc_Altersrente():
         print("Rentenbeginn zu früh gewählt!")
         exit()
 
-    Rentenabzug = Rentenabzug_proMonat * (abs(Renteneintritt.year - RegelRenteneintritt.year) * 12 - (Renteneintritt.month - RegelRenteneintritt.month))
+    Rentenabzug = RV_Abzug_proMonat * (abs(Renteneintritt.year - RegelRenteneintritt.year) * 12 - (Renteneintritt.month - RegelRenteneintritt.month))
     Rentenabzug = round(Rentenabzug, 4)
 
     JahreBisZurRente = abs(BAV_Vertragsbeginn.year - Renteneintritt.year) + abs(BAV_Vertragsbeginn.month - Renteneintritt.month)/12
     # print(round(JahreBisZurRente, 2))
 
-    Rentenpunkte = min(Bruttoeinkommen, RV_Beitragsbemessungsgrenze) / DurchschnittsentgeltRentenversicherung_2020 * JahreBisZurRente
-    Rentenwert = round(Rentenpunkte * RP_Wert * (1 - Rentenabzug), 2)
+    Rentenpunkte = min(Bruttoeinkommen, RV_Beitragsbemessungsgrenze) / RV_Durchschnittsentgelt * JahreBisZurRente
+    Rentenwert = round(Rentenpunkte * RV_RP_Wert * (1 - Rentenabzug), 2)
 
     print("\n")
     print("Rentenpunkte: " + str(round(Rentenpunkte, 2)))
     print("Rentenwert: " + str(Rentenwert) + " €")
 
-    BAV_Rentenpunkte = min(BAV_Bruttoeinkommen, RV_Beitragsbemessungsgrenze) / DurchschnittsentgeltRentenversicherung_2020 * JahreBisZurRente
-    BAV_Rentenwert = round(BAV_Rentenpunkte * RP_Wert * (1 - Rentenabzug), 2)
+    BAV_Rentenpunkte = min(BAV_Bruttoeinkommen, RV_Beitragsbemessungsgrenze) / RV_Durchschnittsentgelt * JahreBisZurRente
+    BAV_Rentenwert = round(BAV_Rentenpunkte * RV_RP_Wert * (1 - Rentenabzug), 2)
 
     print("BAV_Rentenpunkte: " + str(round(BAV_Rentenpunkte, 2)))
     print("BAV_Rentenwert: " + str(BAV_Rentenwert) + " €")
@@ -179,8 +165,10 @@ def calc_Altersrente():
 
     return RegelRenteneintritt, Rentenabzug, Rentenpunkte, BAV_Rentenpunkte
 
+
 def calc_ETF_Sparplan():
     pass
+
 
 if __name__ == "__main__":
     print("\n")
