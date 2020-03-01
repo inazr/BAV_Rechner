@@ -105,7 +105,7 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=GKV, GKV_Zusatzbeitrag=GKV_Z
         else:
             PV = KV_Bemessungssatz * (PV_Beitragssatz * 0.5 + Kinderlosenmalus)
 
-        AG_PV = = KV_Bemessungssatz * PV_Beitragssatz * 0.5
+        AG_PV = KV_Bemessungssatz * PV_Beitragssatz * 0.5
 
     elif PKV:
         KV = PKV_Beitrag
@@ -126,19 +126,15 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=GKV, GKV_Zusatzbeitrag=GKV_Z
     AV = round(AV, 2)
 
 
-    #    11.781
+    # SOLL:    8.110,92 €
 
+    # Sonderausgaben        24.305
 
-    zvE = math.floor(Bruttoeinkommen - 1000 - 36 - min(25046 * 0.9 * 0.5, ((0.90 * 2 * RV) - RV) + ((0.90 * 2 * AV) - AV) + (0.90 * (KV_Bemessungssatz * PV_Beitragssatz * 0.5 + PV) - PV) + (0.96 * KV )))
-    #zvE = math.floor(Bruttoeinkommen - 1000 - 36 - ((0.90 * 2 * RV) - RV) - ((0.90 * 2 * AV) - AV) - (0.90 * (KV_Bemessungssatz * PV_Beitragssatz * 0.5 + PV) - PV) - (0.96 * KV ))
-
-    if
-
-    zvE = math.floor(Bruttoeinkommen - 1000 - 36 min())
+    zvE = math.floor(Bruttoeinkommen - RV - KV - PV)
 
     Lohnsteuer, Soli, Kirchensteuer = calc_steuern(zvE)
 
-    Lohnsteuer = math.floor(Lohnsteuer)
+    Lohnsteuer = round(Lohnsteuer, 2)
     Soli = round(Soli, 2)
     Kirchensteuer = round(Kirchensteuer, 2)
 
@@ -201,7 +197,7 @@ def create_Ansparphase_df():
     #df_ASP['BAV_Nettobelastung'] = df_ASP['Nettoeinkommen'] - df_ASP['BAV_Nettoeinkommen']
     #df_ASP['BAV_Nettobelastung_mtl'] = df_ASP['BAV_Nettobelastung'] / 12
 
-    print(df_ASP.loc[2031: 2032])
+    print(df_ASP.iloc[0:1])
 
 
 if __name__ == "__main__":
