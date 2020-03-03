@@ -11,6 +11,7 @@ Annahmen: Wohnhaft in NRW, Sozialversicherungspflichtig in D
 import pandas as pd
 from datetime import datetime
 import math
+import time
 import Personendaten
 
 pd.set_option("display.max_columns", 16)
@@ -125,12 +126,11 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=GKV, GKV_Zusatzbeitrag=GKV_Z
     RV = round(RV, 2)
     AV = round(AV, 2)
 
+    Vorsorgeaufwendungen = RV + KV + PV
 
-    # SOLL:    8.110,92 €
+    zvE = math.floor(Bruttoeinkommen - Vorsorgeaufwendungen)
 
-    # Sonderausgaben        24.305
-
-    zvE = math.floor(Bruttoeinkommen - RV - KV - PV)
+    Vorsorgeaufwendungen = Vorsorgeaufwendungen + AG_RV + AG_AV + AG_PV
 
     Lohnsteuer, Soli, Kirchensteuer = calc_steuern(zvE)
 
@@ -140,64 +140,25 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=GKV, GKV_Zusatzbeitrag=GKV_Z
 
     Nettoeinkommen = Bruttoeinkommen - KV - AV - PV - RV - Lohnsteuer - Soli - Kirchensteuer
 
-    return KV, AV, PV, RV, zvE, Lohnsteuer, Soli, Kirchensteuer, Nettoeinkommen
+    Rentenpunkte = min(Bruttoeinkommen, RV_Beitragsbemessungsgrenze) / RV_Durchschnittsentgelt
+
+    return KV, AV, PV, RV, zvE, Lohnsteuer, Soli, Kirchensteuer, Nettoeinkommen, Vorsorgeaufwendungen, Rentenpunkte
 
 
-def calc_Altersrente():
-    RegelRenteneintritt = datetime(Geburtsdatum.year + 67, Geburtsdatum.month + 1, 1)
-
-    if (abs(Renteneintritt.year - RegelRenteneintritt.year) * 12 - (Renteneintritt.month - RegelRenteneintritt.month)) > 48:
-        print("Rentenbeginn zu früh gewählt!")
-        exit()
-
-    Rentenabzug = RV_Abzug_proMonat * (abs(Renteneintritt.year - RegelRenteneintritt.year) * 12 - (Renteneintritt.month - RegelRenteneintritt.month))
-    Rentenabzug = round(Rentenabzug, 4)
-
-    JahreBisZurRente = abs(BAV_Vertragsbeginn.year - Renteneintritt.year) + abs(BAV_Vertragsbeginn.month - Renteneintritt.month)/12
-    # print(round(JahreBisZurRente, 2))
-
-    Rentenpunkte = min(Bruttoeinkommen, RV_Beitragsbemessungsgrenze) / RV_Durchschnittsentgelt * JahreBisZurRente
-    Rentenwert = round(Rentenpunkte * RV_RP_Wert * (1 - Rentenabzug), 2)
-
-    print("\n")
-    print("Rentenpunkte: " + str(round(Rentenpunkte, 2)))
-    print("Rentenwert: " + str(Rentenwert) + " €")
-
-    BAV_Rentenpunkte = min(BAV_Bruttoeinkommen, RV_Beitragsbemessungsgrenze) / RV_Durchschnittsentgelt * JahreBisZurRente
-    BAV_Rentenwert = round(BAV_Rentenpunkte * RV_RP_Wert * (1 - Rentenabzug), 2)
-
-    print("BAV_Rentenpunkte: " + str(round(BAV_Rentenpunkte, 2)))
-    print("BAV_Rentenwert: " + str(BAV_Rentenwert) + " €")
-    print("\n")
-    print("Reduzierung der brutto Altersrente durch Abschluss einer BAV voraussichtlich um " + str(round(Rentenwert - BAV_Rentenwert, 2)) + " € pro Monat.")
-
-    return RegelRenteneintritt, Rentenabzug, Rentenpunkte, BAV_Rentenpunkte
-
-
-def calc_ETF_Sparplan():
-    pass
-
-
-def create_Ansparphase_df():
+def create_Ansparphase_df(BAV_Bruttobeitrag=0):
     df_ASP = pd.DataFrame()
-    df_ASP['Jahr'] = pd.date_range(start=BAV_Vertragsbeginn,
-                                           periods=(Renteneintritt.year - BAV_Vertragsbeginn.year + 1), freq='Y').year
+    df_ASP['Monat'] = pd.date_range(start=datetime(BAV_Vertragsbeginn.year, 1,1,0,0) , end=datetime(Renteneintritt.year, 12 , 31, 0, 0 ), freq='M').month
 
-    df_ASP.set_index(keys='Jahr', inplace=True, drop=True)
+    df_ASP.set_index(keys='Monat', inplace=True, drop=True)
 
     df_ASP['Laufzeit'] = df_ASP.index - min(df_ASP.index)
 
-    df_ASP['Bruttoeinkommen'] = Bruttoeinkommen * (1 + Bruttoeinkommen_Wachstum)**df_ASP['Laufzeit']
-    df_ASP['KV'], df_ASP['AV'], df_ASP['PV'], df_ASP['RV'], df_ASP['zvE'], df_ASP['Lohnsteuer'], df_ASP['Soli'], df_ASP['Kirchensteuer'], df_ASP['Nettoeinkommen'] = zip(*df_ASP['Bruttoeinkommen'].map(calc_steuern_sozialabgaben))
-    df_ASP['Sozialabgaben'] = df_ASP['KV'] + df_ASP['AV'] + df_ASP['PV'] + df_ASP['RV']
+    df_ASP['Bruttoeinkommen'] = Bruttoeinkommen * (1 + Bruttoeinkommen_Wachstum)**df_ASP['Laufzeit'] - BAV_Bruttobeitrag
+    df_ASP['KV'], df_ASP['AV'], df_ASP['PV'], df_ASP['RV'], df_ASP['zvE'], df_ASP['Lohnsteuer'], df_ASP['Soli'], df_ASP['Kirchensteuer'], df_ASP['Nettoeinkommen'], df_ASP['Vorsorgeaufwendungen'], df_ASP['Rentenpunkte'] = zip(*df_ASP['Bruttoeinkommen'].map(calc_steuern_sozialabgaben))
 
-    #df_ASP['BAV_Bruttoeinkommen'] = BAV_Bruttoeinkommen * (1 + Bruttoeinkommen_Wachstum)**df_ASP['Laufzeit']
-    #df_ASP['BAV_KV'], df_ASP['BAV_AV'], df_ASP['BAV_PV'], df_ASP['BAV_RV'], df_ASP['BAV_zvE'], df_ASP['BAV_Lohnsteuer'], df_ASP['BAV_Soli'], df_ASP['BAV_Kirchensteuer'], df_ASP['BAV_Nettoeinkommen'] = zip(*df_ASP['BAV_Bruttoeinkommen'].map(calc_steuern_sozialabgaben))
+    print(df_ASP)
 
-    #df_ASP['BAV_Nettobelastung'] = df_ASP['Nettoeinkommen'] - df_ASP['BAV_Nettoeinkommen']
-    #df_ASP['BAV_Nettobelastung_mtl'] = df_ASP['BAV_Nettobelastung'] / 12
-
-    print(df_ASP.iloc[0:1])
+    return(df_ASP)
 
 
 if __name__ == "__main__":
@@ -207,52 +168,8 @@ if __name__ == "__main__":
     print("Die Berechnung erfolgt nach besten Wissen und Gewissem.")
     print("\n")
 
+    time.sleep(0)
 
     print("Schritt 1: Berechnungen der Ansparphase")
-    create_Ansparphase_df()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-'''
-    print("Einkommen ohne BAV: ")
-    KV, AV, PV, RV, zvE, Lohnsteuer, Soli, Kirchensteuer, Nettoeinkommen = calc_steuern_sozialabgaben(
-        Bruttoeinkommen, GKV, GKV_Zusatzbeitrag, PKV, PKV_Beitrag, Kinder, Kirche)
-
-    print("Krankenversicherung: " + str(KV) + " € | Pflegeversicherung: " + str(PV) + " € | Rentenversicherung: " + str(
-        RV)
-          + " € | Arbeitslosenversicherung: " + str(AV) + " € | Lohnsteuer: "
-          + str(Lohnsteuer) + " € | Solidaritaetszuschlag: " + str(Soli) + " € | Kirchensteuer: " + str(Kirchensteuer))
-
-    print("Nettoeinkommen: " + str(round(Nettoeinkommen, 2)) + " €")
-
-    print("\n")
-    print("Einkommen mit BAV: ")
-    BAV_KV, BAV_AV, BAV_PV, BAV_RV, BAV_zvE, BAV_Lohnsteuer, BAV_Soli, BAV_Kirchensteuer, BAV_Nettoeinkommen = calc_steuern_sozialabgaben(
-        BAV_Bruttoeinkommen, GKV, GKV_Zusatzbeitrag, PKV, PKV_Beitrag, Kinder, Kirche)
-
-    print("Krankenversicherung: " + str(KV) + " € | Pflegeversicherung: " + str(PV) + " € | Rentenversicherung: " + str(
-        RV)
-          + " € | Arbeitslosenversicherung: " + str(AV) + " € | Lohnsteuer: "
-          + str(Lohnsteuer) + " € | Solidaritaetszuschlag: " + str(Soli) + " € | Kirchensteuer: " + str(Kirchensteuer))
-
-    print("Nettoeinkommen: " + str(round(Nettoeinkommen, 2)) + " €")
-
-    print("\n")
-    print("Nettobelastung durch Abschluss einer BAV: " + str(round(Nettoeinkommen - BAV_Nettoeinkommen, 2)) + " €.")
-
-    RegelRenteneintritt, Rentenabzug, Rentenpunkte, BAV_Rentenpunkte = calc_Altersrente()
-'''
-
+    df_ASP = create_Ansparphase_df()
+    df_ASP_BAV = create_Ansparphase_df(BAV_Bruttobeitrag)
