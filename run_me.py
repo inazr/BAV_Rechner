@@ -179,7 +179,7 @@ def create_Ansparphase_df(BAV_Bruttobeitrag=0):
 
     df_ASP.set_index(keys='Zeitraum', inplace=True, drop=False)
     
-    df_ASP['Vertragszeitraum'].
+    #df_ASP['Vertragszeitraum'].
 
     df_ASP['Jahr'] = df_ASP.index.year
     df_ASP['Monat'] = df_ASP.index.month
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     print("Die Berechnung erfolgt nach besten Wissen und Gewissem.")
     print("\n")
 
-    time.sleep(0)
+    time.sleep(10)
 
     print("Schritt 1: Berechnungen der Ansparphase")
     df_ASP = create_Ansparphase_df()
