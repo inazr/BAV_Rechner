@@ -175,9 +175,11 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=GKV, GKV_Zusatzbeitrag=GKV_Z
 
 def create_Ansparphase_df(BAV_Bruttobeitrag=0):
     df_ASP = pd.DataFrame()
-    df_ASP['Monat'] = pd.date_range(start=datetime(BAV_Vertragsbeginn.year, 1, 1, 0, 0), end=datetime(Renteneintritt.year, 12 , 31, 0, 0), freq='M')
+    df_ASP['Zeitraum'] = pd.date_range(start=datetime(BAV_Vertragsbeginn.year, 1, 1, 0, 0), end=datetime(Renteneintritt.year, 12 , 31, 0, 0), freq='M')
 
-    df_ASP.set_index(keys='Monat', inplace=True, drop=True)
+    df_ASP.set_index(keys='Zeitraum', inplace=True, drop=False)
+    
+    df_ASP['Vertragszeitraum'].
 
     df_ASP['Jahr'] = df_ASP.index.year
     df_ASP['Monat'] = df_ASP.index.month
@@ -214,3 +216,5 @@ if __name__ == "__main__":
     df_ASP['Verlust_Rentenpunkte'] = df_ASP['Rentenpunkte'] - df_ASP['BAV_Rentenpunkte']
     
     print(df_ASP)
+    
+    
