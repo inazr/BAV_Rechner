@@ -62,7 +62,7 @@ RV_RP_Wert = 33.05
 
 
 def zins_pro_jahr_in_zins_pro_monat(zins):
-    zins = ((1 + zins) ** (1/12)) - 1
+    zins = ((1 + zins) ** (1 / 12)) - 1
     
     return zins
 
@@ -167,7 +167,7 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=GKV, GKV_Zusatzbeitrag=GKV_Z
     Kirchensteuer = round(Kirchensteuer / 12, 2)
     Nettoeinkommen = round(Nettoeinkommen / 12, 2)
     Vorsorgeaufwendungen = round(Vorsorgeaufwendungen / 12, 2)
-    Rentenpunkte = round(Rentenpunkte / 12, 8)
+    Rentenpunkte = round(Rentenpunkte / 12, 10)
     Bruttoeinkommen = round(Bruttoeinkommen / 12, 2)
 
     return KV, AV, PV, RV, zvE, Lohnsteuer, Soli, Kirchensteuer, Nettoeinkommen, Vorsorgeaufwendungen, Rentenpunkte, Bruttoeinkommen
@@ -184,10 +184,11 @@ def create_Ansparphase_df(BAV_Bruttobeitrag=0):
 
     df_ASP.set_index(keys=['Jahr', 'Monat'], inplace=True, drop=True)
 
-    df_ASP['Bruttoeinkommen'] = (Bruttoeinkommen - BAV_Bruttobeitrag)
-    df_ASP['KV'], df_ASP['AV'], df_ASP['PV'], df_ASP['RV'], df_ASP['zvE'], df_ASP['Lohnsteuer'], df_ASP['Soli'], df_ASP['Kirchensteuer'], df_ASP['Nettoeinkommen'], df_ASP['Vorsorgeaufwendungen'], df_ASP['Rentenpunkte'], df_ASP['Bruttoeinkommen'] = zip(*df_ASP['Bruttoeinkommen'].map(calc_steuern_sozialabgaben))
+    df_ASP.insert(0, 'Laufzeit', range(0,len(df_ASP)))
 
-    print(df_ASP)
+    df_ASP['Bruttoeinkommen'] = (Bruttoeinkommen * (1 + zins_pro_jahr_in_zins_pro_monat(Bruttoeinkommen_Wachstum)) ** df_ASP['Laufzeit'] - BAV_Bruttobeitrag)
+    df_ASP['KV'], df_ASP['AV'], df_ASP['PV'], df_ASP['RV'], df_ASP['zvE'], df_ASP['Lohnsteuer'], df_ASP['Soli'], df_ASP['Kirchensteuer'], df_ASP['Nettoeinkommen'], _, df_ASP['Rentenpunkte'], df_ASP['Bruttoeinkommen'] = zip(*df_ASP['Bruttoeinkommen'].map(calc_steuern_sozialabgaben))
+
 
     return(df_ASP)
 
@@ -204,7 +205,12 @@ if __name__ == "__main__":
     print("Schritt 1: Berechnungen der Ansparphase")
     df_ASP = create_Ansparphase_df()
     df_ASP_BAV = create_Ansparphase_df(BAV_Bruttobeitrag)
+ 
     
-    print(df_ASP['Rentenpunkte'].sum())
-    print(df_ASP_BAV['Rentenpunkte'].sum())
-    print((df_ASP['Rentenpunkte'].sum()-df_ASP_BAV['Rentenpunkte'].sum()) * RV_RP_Wert)
+    df_ASP['BAV_Nettoeinkommen'] = df_ASP_BAV['Nettoeinkommen']
+    df_ASP['BAV_Rentenpunkte'] = df_ASP_BAV['Rentenpunkte']
+    
+    df_ASP['Nettoaufwand'] = df_ASP['Nettoeinkommen'] - df_ASP['BAV_Nettoeinkommen']
+    df_ASP['Verlust_Rentenpunkte'] = df_ASP['Rentenpunkte'] - df_ASP['BAV_Rentenpunkte']
+    
+    print(df_ASP)
