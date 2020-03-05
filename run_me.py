@@ -10,15 +10,19 @@ Annahmen: Wohnhaft in NRW, Sozialversicherungspflichtig in D
 
 import pandas as pd
 from datetime import datetime
+from datetime import timedelta
 import math
 import time
 import Personendaten
+import warnings
+warnings.filterwarnings('ignore')
+
 
 pd.set_option("display.max_columns", 16)
 pd.set_option("display.expand_frame_repr", False)
 
 Geburtsdatum = datetime.strptime(Personendaten.Geburtsdatum, '%d.%m.%Y')
-Renteneintritt = datetime.strptime(Personendaten.Renteneintritt, '%d.%m.%Y')
+Renteneintritt = datetime.strptime(Personendaten.Renteneintritt, '%d.%m.%Y') + timedelta(days=-1)
 Bruttoeinkommen = Personendaten.Bruttoeinkommen
 Bruttoeinkommen_Wachstum = Personendaten.Bruttoeinkommen_Wachstum_e
 BAV_Vertragsbeginn = datetime.strptime(Personendaten.BAV_Vertragsbeginn, '%d.%m.%Y')
@@ -28,12 +32,14 @@ BAV_Zuschuss = 0.15
 Freistellungsauftrag = Personendaten.Freistellungsauftrag
 Kapitalmarktzins_e = Personendaten.Kapitalmarktzins_e
 ETF_TER = Personendaten.ETF_TER
+RV_angesammelte_RP = Personendaten.RV_angesammelte_RP
 GKV = Personendaten.GKV
 GKV_Zusatzbeitrag = Personendaten.GKV_Zusatzbeitrag
 PKV = Personendaten.PKV
 PKV_Beitrag = Personendaten.PKV_Beitrag_mtl
 Kinder = Personendaten.Kinder
 Kirche = Personendaten.Kirche
+
 
 
 # Beitragssätze 2020:
@@ -170,29 +176,37 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=GKV, GKV_Zusatzbeitrag=GKV_Z
     Rentenpunkte = round(Rentenpunkte / 12, 10)
     Bruttoeinkommen = round(Bruttoeinkommen / 12, 2)
 
-    return KV, AV, PV, RV, zvE, Lohnsteuer, Soli, Kirchensteuer, Nettoeinkommen, Vorsorgeaufwendungen, Rentenpunkte, Bruttoeinkommen
+    return KV, AV, PV, RV, zvE, Lohnsteuer, Soli, Kirchensteuer, Nettoeinkommen, Rentenpunkte, Bruttoeinkommen
 
 
 def create_Ansparphase_df(BAV_Bruttobeitrag=0):
     df_ASP = pd.DataFrame()
-    df_ASP['Zeitraum'] = pd.date_range(start=datetime(BAV_Vertragsbeginn.year, 1, 1, 0, 0), end=datetime(Renteneintritt.year, 12 , 31, 0, 0), freq='M')
-
-    df_ASP.set_index(keys='Zeitraum', inplace=True, drop=False)
     
-    #df_ASP['Vertragszeitraum'].
+    df_ASP['Zeitraum'] = pd.date_range(start=datetime(BAV_Vertragsbeginn.year, 1, 1, 0, 0), end=datetime(Renteneintritt.year + 1, Renteneintritt.month, Renteneintritt.day, 0, 0), freq='M')
+    
 
-    df_ASP['Jahr'] = df_ASP.index.year
-    df_ASP['Monat'] = df_ASP.index.month
+    df_ASP.set_index(keys='Zeitraum', inplace=True, drop=True)
+   #
+   # df_ASP['Jahr'] = df_ASP.index.year
+   # df_ASP['Monat'] = df_ASP.index.month
 
-    df_ASP.set_index(keys=['Jahr', 'Monat'], inplace=True, drop=True)
+   # df_ASP.set_index(keys=['Jahr', 'Monat'], inplace=True, drop=True)
 
-    df_ASP.insert(0, 'Laufzeit', range(0,len(df_ASP)))
+    df_ASP.insert(0, 'Laufzeit', range(0, len(df_ASP)))
 
-    df_ASP['Bruttoeinkommen'] = (Bruttoeinkommen * (1 + zins_pro_jahr_in_zins_pro_monat(Bruttoeinkommen_Wachstum)) ** df_ASP['Laufzeit'] - BAV_Bruttobeitrag)
-    df_ASP['KV'], df_ASP['AV'], df_ASP['PV'], df_ASP['RV'], df_ASP['zvE'], df_ASP['Lohnsteuer'], df_ASP['Soli'], df_ASP['Kirchensteuer'], df_ASP['Nettoeinkommen'], _, df_ASP['Rentenpunkte'], df_ASP['Bruttoeinkommen'] = zip(*df_ASP['Bruttoeinkommen'].map(calc_steuern_sozialabgaben))
+    df_ASP['Bruttoeinkommen'] = (Bruttoeinkommen * (1 + zins_pro_jahr_in_zins_pro_monat(Bruttoeinkommen_Wachstum)) ** df_ASP['Laufzeit'])
+    
+    
+    df_ASP['KV'], df_ASP['AV'], df_ASP['PV'], df_ASP['RV'], df_ASP['zvE'], df_ASP['Lohnsteuer'], df_ASP['Soli'], df_ASP['Kirchensteuer'], df_ASP['Nettoeinkommen'], df_ASP['Rentenpunkte'], df_ASP['Bruttoeinkommen'] = zip(*df_ASP['Bruttoeinkommen'].map(calc_steuern_sozialabgaben))
+    df_ASP['Bruttoeinkommen'].loc[Renteneintritt + timedelta(days=1):] = df_ASP['Rentenpunkte'].loc[:Renteneintritt].sum() * RV_RP_Wert
+    
+    df_ASP['BAV_Bruttoeinkommen'] = df_ASP['Bruttoeinkommen'] * 12 - BAV_Bruttobeitrag
+    df_ASP['BAV_Bruttoeinkommen'].loc[:BAV_Vertragsbeginn] = df_ASP['Bruttoeinkommen'] * 12
+    
+    _, _, _, _, _, _, _, _, df_ASP['BAV_Nettoeinkommen'], df_ASP['BAV_Rentenpunkte'], df_ASP['BAV_Bruttoeinkommen'] = zip(*df_ASP['BAV_Bruttoeinkommen'].map(calc_steuern_sozialabgaben))
+    df_ASP['Bruttoeinkommen'].loc[Renteneintritt + timedelta(days=1):] = df_ASP['BAV_Rentenpunkte'].loc[:Renteneintritt].sum() * RV_RP_Wert
 
-
-    return(df_ASP)
+    return(df_ASP.tail(14))
 
 
 if __name__ == "__main__":
@@ -202,19 +216,10 @@ if __name__ == "__main__":
     print("Die Berechnung erfolgt nach besten Wissen und Gewissem.")
     print("\n")
 
-    time.sleep(10)
-
-    print("Schritt 1: Berechnungen der Ansparphase")
-    df_ASP = create_Ansparphase_df()
-    df_ASP_BAV = create_Ansparphase_df(BAV_Bruttobeitrag)
+    time.sleep(0)
+    
+    df_ASP = create_Ansparphase_df(BAV_Bruttobeitrag)
  
-    
-    df_ASP['BAV_Nettoeinkommen'] = df_ASP_BAV['Nettoeinkommen']
-    df_ASP['BAV_Rentenpunkte'] = df_ASP_BAV['Rentenpunkte']
-    
-    df_ASP['Nettoaufwand'] = df_ASP['Nettoeinkommen'] - df_ASP['BAV_Nettoeinkommen']
-    df_ASP['Verlust_Rentenpunkte'] = df_ASP['Rentenpunkte'] - df_ASP['BAV_Rentenpunkte']
-    
     print(df_ASP)
     
     
