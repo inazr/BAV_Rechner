@@ -12,6 +12,8 @@ RV_angesammelte_RP = 10 # Bisher erworbene Rentenpunkte. Vereinfacht -> Summe ü
 # Krankenversicherung
 GKV = True
 GKV_Zusatzbeitrag = 0.007
+
+# Funktioniert noch nicht
 PKV = False
 PKV_Beitrag_mtl = 0
 
