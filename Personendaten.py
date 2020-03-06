@@ -4,11 +4,10 @@ Geburtsdatum = '14.11.1986'
 Renteneintritt = '01.12.2053' # IdR: 01. des Monats nach dem 67. Geburtstag. Mit Abzug: frühestens nach dem 62. Geburstag
 
 Bruttoeinkommen = 48000
-Bruttoeinkommen_Wachstum_e = 0.02
-
+Bruttoeinkommen_Wachstum_e = 0.02 # Erwarteter Wert über der Inflation.
 
 # Rentenversicherung
-RV_angesammelte_RP = 10 # Bisher erworbene Rentenpunkte. Vereinfacht -> Summe über eigener Bruttoverdienst / Deutschlandweiter durchschnittlicher Bruttoverdienst ( im Jahr 2020 ca. 40551 €) Schätzwert: Anzahl Arbeitsjahre.
+RV_angesammelte_RP = 10 # Bisher erworbene Rentenpunkte. Vereinfacht -> Summe über eigener Bruttoverdienst / Deutschlandweiter durchschnittlicher Bruttoverdienst p.a. ( im Jahr 2020 ca. 40551 €) Schätzwert: Anzahl Arbeitsjahre.
 
 # Krankenversicherung
 GKV = True
