@@ -25,7 +25,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-pd.set_option("display.max_columns", 16)
+pd.set_option("display.max_columns", 12)
 pd.set_option("display.expand_frame_repr", False)
 
 Geburtsdatum = datetime.strptime(Personendaten.Geburtsdatum, '%d.%m.%Y')
@@ -128,6 +128,11 @@ def calc_rentenpunkte(Einkommen):
     return Rentenpunkte_pro_Monat
 
 
+def calc_ETF_verlauf():
+
+    return
+
+
 def calc_steuern_sozialabgaben(Bruttoeinkommen, Monatsbrutto, Arbeit_vs_Rente= 1, GKV=GKV, GKV_Zusatzbeitrag=GKV_Zusatzbeitrag, PKV=PKV, PKV_Beitrag=PKV_Beitrag, Kinder=Kinder, Kirche=Kirche):
 
     if GKV:
@@ -210,6 +215,9 @@ def create_Ansparphase_df(BAV_Bruttobeitrag=0):
     df_Prognose['Arbeit_vs_Rente'] = 0
     df_Prognose['Arbeit_vs_Rente'].loc[:Renteneintritt] = 1
 
+    df_Prognose['Vertrag'] = 0
+    df_Prognose['Vertrag'].loc[BAV_Vertragsbeginn:Renteneintritt] = 1
+
     '''
     Implementiert das Wachstum des Bruttoeinkommens jedes Jahr. 
     '''
@@ -280,11 +288,26 @@ def create_Ansparphase_df(BAV_Bruttobeitrag=0):
 
 
     '''
-    Berechnet die Anlage in einen ETF inkl. Steuern
+    Berechnet den mtl. Nettoaufwand der BAV
     '''
-    df_Prognose['BAV_Nettobelastung'] = (df_Prognose['Nettoeinkommen'] - df_Prognose['BAV_Nettoeinkommen']).resample('Y').mean().fillna(method='ffill')
-    
-    
+    df_Prognose['Jahresnetto'] = df_Prognose['Nettoeinkommen'].resample('Y').sum()
+    df_Prognose['BAV_Jahresnetto'] = df_Prognose['BAV_Nettoeinkommen'].resample('Y').sum()
+    df_Prognose['Vertragsmonate'] = df_Prognose['Vertrag'].resample('Y').sum()
+
+    df_Prognose['Jahresnetto'] = df_Prognose['Jahresnetto'].fillna(method='bfill') * df_Prognose['Vertrag']
+    df_Prognose['BAV_Jahresnetto'] = df_Prognose['BAV_Jahresnetto'].fillna(method='bfill') * df_Prognose['Vertrag']
+    df_Prognose['Vertragsmonate'] = df_Prognose['Vertragsmonate'].fillna(method='bfill')
+
+    df_Prognose['Nettoaufwand'] = (df_Prognose['Jahresnetto'] - df_Prognose['BAV_Jahresnetto']) / df_Prognose['Vertragsmonate']
+
+    df_Prognose.drop(labels=['Jahresnetto', 'BAV_Jahresnetto', 'Vertragsmonate'], axis=1, inplace=True)
+
+    '''
+    In diesem Abschnitt wird die Entwicklung eines ETF inkl. Steuern berechnet
+    '''
+    df_Prognose['Fondswert'] = 0
+    df_Prognose['Fondswert'] = 0
+
 
     return(df_Prognose)
 
@@ -295,6 +318,7 @@ if __name__ == "__main__":
     print("        Dieses Angebot stellt keine Beratung dar.        ")
     print(" Die Berechnung erfolgt nach bestem Wissen und Gewissen. ")
     print("\n")
+    print("1.")
     print("Auch wenn das BAV_Nettoeinkommen anfangs falsch aussieht,")
     print("                  der Wert ist korrekt.                  ")
     print("\n")
@@ -302,12 +326,9 @@ if __name__ == "__main__":
     time.sleep(0)
     
     df_Prognose = create_Ansparphase_df(BAV_Bruttobeitrag)
-    #df_Prognose = df_Prognose.round(decimals=2)
 
     #print(df_Prognose)
-    print(df_Prognose.head(14))
+    print(df_Prognose.head(24))
     #print(df_Prognose.tail(14))
     
-    df_Prognose.to_csv('BAV_Berechnung.csv', sep=';')
-    
-    
+    #df_Prognose.to_csv('BAV_Berechnung.csv', sep=';')
