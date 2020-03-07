@@ -128,8 +128,7 @@ def calc_rentenpunkte(Einkommen):
     return Rentenpunkte_pro_Monat
 
 
-def calc_steuern_sozialabgaben(Monatsbrutto, Arbeit_vs_Rente= 1, GKV=GKV, GKV_Zusatzbeitrag=GKV_Zusatzbeitrag, PKV=PKV, PKV_Beitrag=PKV_Beitrag, Kinder=Kinder, Kirche=Kirche):
-    Bruttoeinkommen = 12 * Monatsbrutto
+def calc_steuern_sozialabgaben(Bruttoeinkommen, Monatsbrutto, Arbeit_vs_Rente= 1, GKV=GKV, GKV_Zusatzbeitrag=GKV_Zusatzbeitrag, PKV=PKV, PKV_Beitrag=PKV_Beitrag, Kinder=Kinder, Kirche=Kirche):
 
     if GKV:
         KV_Beitragssatz = (GKV_Beitragssatz + GKV_Zusatzbeitrag) * 0.5
@@ -224,7 +223,6 @@ def create_Ansparphase_df(BAV_Bruttobeitrag=0):
     '''
     Berechnet die Rentenpunkte 
     '''
-    df_Prognose['Rentenpunkte'] = 0
     df_Prognose['Rentenpunkte'] = df_Prognose['Bruttoeinkommen'].map(calc_rentenpunkte)
 
 
@@ -248,7 +246,6 @@ def create_Ansparphase_df(BAV_Bruttobeitrag=0):
     '''
     Berechnet die Rentenpunkte mit BAV
     '''
-    df_Prognose['BAV_Rentenpunkte'] = 0
     df_Prognose['BAV_Rentenpunkte'] = df_Prognose['BAV_Bruttoeinkommen'].map(calc_rentenpunkte)
 
     '''
@@ -262,24 +259,44 @@ def create_Ansparphase_df(BAV_Bruttobeitrag=0):
     '''
     df_Prognose['Rentenpunkte'].loc[Renteneintritt + timedelta(days=1):] = 0
     df_Prognose['BAV_Rentenpunkte'].loc[Renteneintritt + timedelta(days=1):] = 0
+
+    '''
+    Berechnet das entgültige Jahresbrutto
+    '''
+    df_Prognose['Jahresbrutto'] = df_Prognose['Bruttoeinkommen'].resample('Y').sum()
+    df_Prognose['Jahresbrutto'].fillna(method='bfill', inplace=True)
+    df_Prognose['Jahresbrutto'] = df_Prognose['Jahresbrutto'] + (1 - df_Prognose['Arbeit_vs_Rente'])
+    
+    df_Prognose['BAV_Jahresbrutto'] = df_Prognose['BAV_Bruttoeinkommen'].resample('Y').sum()
+    df_Prognose['BAV_Jahresbrutto'].fillna(method='bfill', inplace=True)
     
     
     '''
     Berechnet die Sozialabgaben und das Nettoeinkommen
     '''
-    df_Prognose['KV'], df_Prognose['AV'], df_Prognose['PV'], df_Prognose['RV'], df_Prognose['zvE'], df_Prognose['Lohnsteuer'], df_Prognose['Soli'], df_Prognose['Kirchensteuer'], df_Prognose['Nettoeinkommen'] = zip(*df_Prognose.apply(lambda x: calc_steuern_sozialabgaben(x['Bruttoeinkommen'], x['Arbeit_vs_Rente']), axis=1))
+    df_Prognose['KV'], df_Prognose['AV'], df_Prognose['PV'], df_Prognose['RV'], df_Prognose['zvE'], df_Prognose['Lohnsteuer'], df_Prognose['Soli'], df_Prognose['Kirchensteuer'], df_Prognose['Nettoeinkommen'] = zip(*df_Prognose.apply(lambda x: calc_steuern_sozialabgaben(x['Jahresbrutto'], x['Bruttoeinkommen'], x['Arbeit_vs_Rente']), axis=1))
 
-    _, _, _, _, _, _, _, _, df_Prognose['BAV_Nettoeinkommen'] = zip(*df_Prognose.apply(lambda x: calc_steuern_sozialabgaben(x['BAV_Bruttoeinkommen'], x['Arbeit_vs_Rente']), axis=1))
+    _, _, _, _, _, _, _, _, df_Prognose['BAV_Nettoeinkommen'] = zip(*df_Prognose.apply(lambda x: calc_steuern_sozialabgaben(x['BAV_Jahresbrutto'], x['BAV_Bruttoeinkommen'], x['Arbeit_vs_Rente']), axis=1))
+
+
+    '''
+    Berechnet die Anlage in einen ETF inkl. Steuern
+    '''
+    df_Prognose['BAV_Nettobelastung'] = (df_Prognose['Nettoeinkommen'] - df_Prognose['BAV_Nettoeinkommen']).resample('Y').mean().fillna(method='ffill')
+    
+    
 
     return(df_Prognose)
 
 
 if __name__ == "__main__":
     print("\n")
-    print("!!!             Alle Angaben ohne Gewähr            !!!")
-    print("       Dieses Angebot stellt keine Beratung dar.       ")
-    print("Die Berechnung erfolgt nach bestem Wissen und Gewissen.")
-    
+    print("!!!              Alle Angaben ohne Gewähr             !!!")
+    print("        Dieses Angebot stellt keine Beratung dar.        ")
+    print(" Die Berechnung erfolgt nach bestem Wissen und Gewissen. ")
+    print("\n")
+    print("Auch wenn das BAV_Nettoeinkommen anfangs falsch aussieht,")
+    print("                  der Wert ist korrekt.                  ")
     print("\n")
 
     time.sleep(0)
@@ -287,9 +304,9 @@ if __name__ == "__main__":
     df_Prognose = create_Ansparphase_df(BAV_Bruttobeitrag)
     #df_Prognose = df_Prognose.round(decimals=2)
 
-    print(df_Prognose)
-    # print(df_Prognose.head(14))
-    # print(df_Prognose.tail(14))
+    #print(df_Prognose)
+    print(df_Prognose.head(14))
+    #print(df_Prognose.tail(14))
     
     df_Prognose.to_csv('BAV_Berechnung.csv', sep=';')
     
