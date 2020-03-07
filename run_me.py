@@ -130,7 +130,7 @@ def calc_rentenpunkte(Einkommen):
 
 def calc_ETF_verlauf():
 
-    return
+    return Fondswert, Vorabpauschale, Entnahme, Abgeltungssteuer
 
 
 def calc_steuern_sozialabgaben(Bruttoeinkommen, Monatsbrutto, Arbeit_vs_Rente= 1, GKV=GKV, GKV_Zusatzbeitrag=GKV_Zusatzbeitrag, PKV=PKV, PKV_Beitrag=PKV_Beitrag, Kinder=Kinder, Kirche=Kirche):
@@ -306,7 +306,12 @@ def create_Ansparphase_df(BAV_Bruttobeitrag=0):
     In diesem Abschnitt wird die Entwicklung eines ETF inkl. Steuern berechnet
     '''
     df_Prognose['Fondswert'] = 0
-    df_Prognose['Fondswert'] = 0
+    df_Prognose['Basisertrag'] = 0
+    df_Prognose['Vorabpauschale'] = 0
+    df_Prognose['Entnahme'] = 0
+    df_Prognose['Steuerlast'] = 0
+
+    df_Prognose['Fondswert'], df_Prognose['Vorabpauschale'], df_Prognose['Entnahme'], df_Prognose['Abgeltungssteuer'] = zip(*df_Prognose.apply(lambda x: calc_ETF_verlauf(x['Nettoaufwand'], x['Arbeit_vs_Rente']), axis=1))
 
 
     return(df_Prognose)
