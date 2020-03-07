@@ -126,7 +126,7 @@ def calc_rentenpunkte(einkommen):
     return Rentenpunkte_pro_Monat
 
 
-def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=GKV, GKV_Zusatzbeitrag=GKV_Zusatzbeitrag, PKV=PKV, PKV_Beitrag=PKV_Beitrag, Kinder=Kinder, Kirche=Kirche):
+def calc_steuern_sozialabgaben(Bruttoeinkommen, Arbeit_vs_Rente= 1, GKV=GKV, GKV_Zusatzbeitrag=GKV_Zusatzbeitrag, PKV=PKV, PKV_Beitrag=PKV_Beitrag, Kinder=Kinder, Kirche=Kirche):
 
     if GKV:
         KV_Beitragssatz = (GKV_Beitragssatz + GKV_Zusatzbeitrag) * 0.5
@@ -151,9 +151,12 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, GKV=GKV, GKV_Zusatzbeitrag=GKV_Z
     AV = AV_Bemessungssatz * AV_Beitragssatz * 0.5
     AG_AV = AV_Bemessungssatz * AV_Beitragssatz * 0.5
 
-    RV_Bemessungssatz = min(Bruttoeinkommen, AV_Beitragsbemessungsgrenze)
-    RV = RV_Bemessungssatz * RV_Beitragssatz * 0.5
-    AG_RV = RV_Bemessungssatz * RV_Beitragssatz * 0.5
+    if Arbeit_vs_Rente == 0:
+        RV = 0
+
+    else:
+        RV_Bemessungssatz = min(Bruttoeinkommen, AV_Beitragsbemessungsgrenze)
+        RV = RV_Bemessungssatz * RV_Beitragssatz * 0.5
 
     KV = round(KV, 2)
     PV = round(PV, 2)
@@ -203,6 +206,12 @@ def create_Ansparphase_df(BAV_Bruttobeitrag=0):
     Generiert eine fortlaufende Nummer
     '''
     df_ASP.insert(0, 'Laufzeit', range(0, len(df_ASP)))
+    
+    '''
+    Boolean 1 = Ansparphase, 0 = Rentenphase
+    '''
+    df_ASP['Arbeit_vs_Rente'] = 0
+    df_ASP['Arbeit_vs_Rente'].loc[:Renteneintritt] = 1
 
     '''
     Implementiert das Wachstum des Bruttoeinkommens jedes Jahr. 
@@ -269,9 +278,10 @@ def create_Ansparphase_df(BAV_Bruttobeitrag=0):
     '''
     Berechnet die Sozialabgaben und das Nettoeinkommen
     '''
-    df_ASP['KV'], df_ASP['AV'], df_ASP['PV'], df_ASP['RV'], df_ASP['zvE'], df_ASP['Lohnsteuer'], df_ASP['Soli'], df_ASP['Kirchensteuer'], df_ASP['Nettoeinkommen'] = zip(*df_ASP['Jahresbrutto'].map(calc_steuern_sozialabgaben))
 
-    _, _, _, _, _, _, _, _, df_ASP['BAV_Nettoeinkommen_Jahresdurchschnitt'] = zip(*df_ASP['BAV_Jahresbrutto'].map(calc_steuern_sozialabgaben))
+    df_ASP['KV'], df_ASP['AV'], df_ASP['PV'], df_ASP['RV'], df_ASP['zvE'], df_ASP['Lohnsteuer'], df_ASP['Soli'], df_ASP['Kirchensteuer'], df_ASP['Nettoeinkommen'] = zip(*df_ASP.apply(lambda x: calc_steuern_sozialabgaben(x['Jahresbrutto'], x['Arbeit_vs_Rente']), axis=1))
+
+    _, _, _, _, _, _, _, _, df_ASP['BAV_Nettoeinkommen_Jahresdurchschnitt'] = zip(*df_ASP.apply(lambda x: calc_steuern_sozialabgaben(x['BAV_Jahresbrutto'], x['Arbeit_vs_Rente']), axis=1))
 
 
 #    df_ASP['Bruttoeinkommen'].loc[Renteneintritt + timedelta(days=1):] = df_ASP['BAV_Rentenpunkte'].loc[:Renteneintritt].sum() * RV_RP_Wert
