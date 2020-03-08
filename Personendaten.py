@@ -3,7 +3,7 @@
 Geburtsdatum = '14.11.1986'
 Renteneintritt = '01.12.2053' # IdR: 01. des Monats nach dem 67. Geburtstag. Mit Abzug: frühestens nach dem 62. Geburstag. Der Abzug wird nicht berechnet!
 
-Bruttoeinkommen = 654321
+Bruttoeinkommen = 54321
 Bruttoeinkommen_Wachstum_e = 0.02 # Erwarteter Wert über der Inflation.
 
 # Rentenversicherung
