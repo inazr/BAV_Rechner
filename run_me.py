@@ -237,7 +237,7 @@ def calc_steuern_sozialabgaben(Bruttoeinkommen, Monatsbrutto, Arbeit_vs_Rente= 1
     return KV, AV, PV, RV, zvE, Lohnsteuer, Soli, Kirchensteuer, Nettoeinkommen
 
 
-def create_Ansparphase_df(BAV_Bruttobeitrag=0):
+def create_Prognose_df(BAV_Bruttobeitrag=0):
     df_Prognose = pd.DataFrame()
 
     '''
@@ -382,11 +382,14 @@ if __name__ == "__main__":
     print("\n")
 
 
-    time.sleep(0)
+    time.sleep(10)
     
-    df_Prognose = create_Ansparphase_df(BAV_Bruttobeitrag)
-
+    df_Prognose = create_Prognose_df(BAV_Bruttobeitrag)
     print(df_Prognose)
+    df_Prognose.to_csv('Prognose.csv', sep=';')
+    
+    print('Der gesamte Verlauf wurde als csv Datei gespeichert.')
+    print("\n")
 
     
     print('Das Nettoeinkommen im Rentenalter mit einer Anlage in einen ETF beträgt: ' + str(round(df_Prognose['Nettoeinkommen'].iloc[-1], 2)) + '€.')
