@@ -22,6 +22,8 @@ warnings.filterwarnings('ignore')
 pd.set_option("display.max_columns", 12)
 pd.set_option("display.expand_frame_repr", False)
 
+
+
 Geburtsdatum = datetime.strptime(Personendaten.Geburtsdatum, '%d.%m.%Y')
 Renteneintritt = datetime.strptime(Personendaten.Renteneintritt, '%d.%m.%Y') + timedelta(days=-1)
 Bruttoeinkommen = Personendaten.Bruttoeinkommen // 12
@@ -269,7 +271,6 @@ def create_Prognose_df(BAV_Bruttobeitrag=0):
     df_Prognose['Bruttoeinkommenswachstum'].fillna(method='ffill', inplace=True)
     df_Prognose['Bruttoeinkommen'] = df_Prognose['Bruttoeinkommenswachstum'] * (Bruttoeinkommen)
     
-    df_Prognose.drop(labels='Bruttoeinkommenswachstum', inplace=True, axis=1)
     
     '''
     Berechnet die Rentenpunkte 
@@ -343,8 +344,6 @@ def create_Prognose_df(BAV_Bruttobeitrag=0):
 
     df_Prognose['Nettoaufwand'] = (df_Prognose['Jahresnetto'] - df_Prognose['BAV_Jahresnetto']) / df_Prognose['Vertragsmonate']
 
-    df_Prognose.drop(labels=['Jahresnetto', 'BAV_Jahresnetto', 'Vertragsmonate'], axis=1, inplace=True)
-
     '''
     In diesem Abschnitt wird die Entwicklung eines ETF inkl. Steuern berechnet
     '''
@@ -381,16 +380,14 @@ if __name__ == "__main__":
     print(" Die Berechnung erfolgt nach bestem Wissen und Gewissen. ")
     print("\n")
 
-
-    time.sleep(10)
+    time.sleep(0)
     
     df_Prognose = create_Prognose_df(BAV_Bruttobeitrag)
     print(df_Prognose)
-    df_Prognose.to_csv('Prognose.csv', sep=';')
     
+    df_Prognose.to_csv('Prognose.csv', sep=';')
     print('Der gesamte Verlauf wurde als csv Datei gespeichert.')
     print("\n")
-
-    
-    print('Das Nettoeinkommen im Rentenalter mit einer Anlage in einen ETF beträgt: ' + str(round(df_Prognose['Nettoeinkommen'].iloc[-1], 2)) + '€.')
-    print('Das Nettoeinkommen im Rentenalter mit einer Anlage in eine BAV beträgt: ' + str(df_Prognose['BAV_Nettoeinkommen'].iloc[-1]) + '€. PLUS! der Nettorente aus der BAV.')
+ 
+    print('Das Nettoeinkommen im Rentenalter mit einer Anlage in einen ETF beträgt voraussichtlich: ' + round(df_Prognose['Nettoeinkommen'].iloc[-1], 2).astype(str) + ' € pro Monat.')
+    print('Das Nettoeinkommen im Rentenalter mit einer Anlage in eine BAV beträgt voraussichtlich: ' +round(df_Prognose['BAV_Nettoeinkommen'].iloc[-1], 2).astype(str) + ' € pro Monat. PLUS! der Nettorente aus der BAV.')
