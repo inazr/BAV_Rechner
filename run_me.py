@@ -5,12 +5,7 @@ Bei Fragen: Stephan@BI
 
 Alle Angaben ohne Gewähr!
 Bitte Änderungen ausschließlich in Personendaten.py durchführen.
-Annahmen: Wohnhaft in NRW, Sozialversicherungspflichtig in D
-
-
-ToDo:
-
-Rentenversicherungsbeitrag während der Rente herausrechnen!!!
+Annahmen: Arbeitsort in NRW, Sozialversicherungspflichtig in D
 
 '''
 
@@ -23,7 +18,6 @@ import time
 import Personendaten
 import warnings
 warnings.filterwarnings('ignore')
-
 
 pd.set_option("display.max_columns", 12)
 pd.set_option("display.expand_frame_repr", False)
@@ -39,6 +33,7 @@ BAV_Zuschuss = 0.15
 Freistellungsauftrag = Personendaten.Freistellungsauftrag
 Kapitalmarktzins_e = Personendaten.Kapitalmarktzins_e
 ETF_TER = Personendaten.ETF_TER
+ETF_Entnahme = Personendaten.Entnahme_mtl
 RV_angesammelte_RP = Personendaten.RV_angesammelte_RP
 GKV = Personendaten.GKV
 GKV_Zusatzbeitrag = Personendaten.GKV_Zusatzbeitrag
@@ -71,6 +66,7 @@ RV_Durchschnittsentgelt = 40551
 RV_Durchschnittsentgelt_wachstum = 0.0185
 RV_Abzug_proMonat = 0.003
 RV_RP_Wert = 33.05
+Abgeltungssteuer = 0.25
 
 
 
@@ -128,9 +124,56 @@ def calc_rentenpunkte(Einkommen):
     return Rentenpunkte_pro_Monat
 
 
-def calc_ETF_verlauf():
+def calc_ETF_verlauf(df_ETF):
+    df_ETF['Nettoaufwand'].fillna(0, inplace=True)
 
-    return Fondswert, Vorabpauschale, Entnahme, Abgeltungssteuer
+    df_ETF['Bruttoentnahme'] = ETF_Entnahme * (1 - df_ETF['Arbeit_vs_Rente'])
+    df_ETF['Jahresbruttoentnahme'] = df_ETF['Bruttoentnahme'].resample('Y').sum()
+    
+    for i in range(1, len(df_ETF)):
+       
+        '''
+        Berechnet den Bruttofondswert
+        '''
+        df_ETF['Fondswert'].iloc[i] = (df_ETF['Nettoaufwand'].iloc[i] + df_ETF['Fondswert'].iloc[i-1] - df_ETF['Bruttoentnahme'].iloc[i-1]) * (1 + zins_pro_jahr_in_zins_pro_monat(Kapitalmarktzins_e))
+        
+        '''
+        Berechnet die TER
+        '''
+        df_ETF['TER'].iloc[i] = df_ETF['Fondswert'].iloc[i] * zins_pro_jahr_in_zins_pro_monat(ETF_TER)
+
+       # Berechnung der Steuer auf den Aktien Fond
+        if i % 12 == 11: # == 11 -> Dezember
+            # Basisertrag (min 0) = Wert am Jahresanfang * Basiszins 2020 * 0,7
+            df_ETF['Basisertrag'].iloc[i] = df_ETF['Fondswert'].iloc[i-11] * 0.0007 * 0.7
+            
+            # Vorabpauschale = max(min(Basisertrag, Gesamtergebnis) - Bruttoentnahme, 0)
+            df_ETF['Vorabpauschale'].iloc[i] = max(df_ETF['Basisertrag'].iloc[i] - df_ETF['Jahresbruttoentnahme'].iloc[i], 0)
+            
+            # Steuer der Vorabpauschale
+            df_ETF['Steuerlast_Vorabpauschale'].iloc[i] = df_ETF['Vorabpauschale'].iloc[i] * 0.7 * ((1 + Solidaritaetszuschlag) * Abgeltungssteuer)
+
+            # Steuer der Entnahme  Bruttoentnahme
+            df_ETF['Steuerlast_Bruttoentnahme'].iloc[i] = df_ETF['Jahresbruttoentnahme'].iloc[i] * 0.7 * ((1 + Solidaritaetszuschlag) * Abgeltungssteuer)
+            
+            # Berechnung der Gesamtsteuer inkl. Freistellungsauftrag
+            df_ETF['Steuerlast_Gesamt'].iloc[i] = max(df_ETF['Steuerlast_Vorabpauschale'].iloc[i] + df_ETF['Steuerlast_Bruttoentnahme'].iloc[i] - Freistellungsauftrag, 0)
+          
+            # Berechnet die Nettoentnahme nach Abzug der Abgeltungssteuer
+            df_ETF['Jahresnetto'].iloc[i] = df_ETF['Jahresbruttoentnahme'].iloc[i] - df_ETF['Steuerlast_Gesamt'].iloc[i]
+
+        '''
+        Berechnet den Nettofondswert
+        '''
+        df_ETF['Fondswert'].iloc[i] = df_ETF['Fondswert'].iloc[i] - df_ETF['TER'].iloc[i]
+        
+    '''
+    Berechnet die monatliche Nettoentnahme
+    '''
+    df_ETF['Jahresnetto'].fillna(method='bfill', inplace=True)
+    df_ETF['Nettoentnahme'] = df_ETF['Jahresnetto'] / 12
+    
+    return df_ETF
 
 
 def calc_steuern_sozialabgaben(Bruttoeinkommen, Monatsbrutto, Arbeit_vs_Rente= 1, GKV=GKV, GKV_Zusatzbeitrag=GKV_Zusatzbeitrag, PKV=PKV, PKV_Beitrag=PKV_Beitrag, Kinder=Kinder, Kirche=Kirche):
@@ -305,14 +348,28 @@ def create_Ansparphase_df(BAV_Bruttobeitrag=0):
     '''
     In diesem Abschnitt wird die Entwicklung eines ETF inkl. Steuern berechnet
     '''
-    df_Prognose['Fondswert'] = 0
-    df_Prognose['Basisertrag'] = 0
-    df_Prognose['Vorabpauschale'] = 0
-    df_Prognose['Entnahme'] = 0
-    df_Prognose['Steuerlast'] = 0
+    df_ETF = df_Prognose[['Nettoaufwand', 'Arbeit_vs_Rente']]
+    
+    df_ETF['Fondswert'] = 0
+    df_ETF['Basisertrag'] = 0
+    df_ETF['Vorabpauschale'] = 0
+    df_ETF['Bruttoentnahme'] = 0
+    df_ETF['TER'] = 0
+    df_ETF['Steuerlast_Vorabpauschale'] = 0
+    df_ETF['Steuerlast_Bruttoentnahme'] = 0
+    df_ETF['Steuerlast_Gesamt'] = 0
+    df_ETF['Nettoentnahme'] = 0
+    df_ETF['Jahresnetto'] = np.nan
+    
+    df_ETF = calc_ETF_verlauf(df_ETF)
 
-    df_Prognose['Fondswert'], df_Prognose['Vorabpauschale'], df_Prognose['Entnahme'], df_Prognose['Abgeltungssteuer'] = zip(*df_Prognose.apply(lambda x: calc_ETF_verlauf(x['Nettoaufwand'], x['Arbeit_vs_Rente']), axis=1))
 
+    '''
+    Korrigiert das Jahresnetto um den Ertrag aus dem ETF
+    '''
+    df_Prognose['Nettoeinkommen'] = df_Prognose['Nettoeinkommen'] + df_ETF['Nettoentnahme']
+
+    df_Prognose = pd.concat([df_Prognose, df_ETF], axis=1)
 
     return(df_Prognose)
 
@@ -323,17 +380,14 @@ if __name__ == "__main__":
     print("        Dieses Angebot stellt keine Beratung dar.        ")
     print(" Die Berechnung erfolgt nach bestem Wissen und Gewissen. ")
     print("\n")
-    print("1.")
-    print("Auch wenn das BAV_Nettoeinkommen anfangs falsch aussieht,")
-    print("                  der Wert ist korrekt.                  ")
-    print("\n")
+
 
     time.sleep(0)
     
     df_Prognose = create_Ansparphase_df(BAV_Bruttobeitrag)
 
-    #print(df_Prognose)
-    print(df_Prognose.head(24))
-    #print(df_Prognose.tail(14))
+    print(df_Prognose)
+
     
-    #df_Prognose.to_csv('BAV_Berechnung.csv', sep=';')
+    print('Das Nettoeinkommen im Rentenalter mit einer Anlage in einen ETF beträgt: ' + str(round(df_Prognose['Nettoeinkommen'].iloc[-1], 2)) + '€.')
+    print('Das Nettoeinkommen im Rentenalter mit einer Anlage in eine BAV beträgt: ' + str(df_Prognose['BAV_Nettoeinkommen'].iloc[-1]) + '€. PLUS! der Nettorente aus der BAV.')
