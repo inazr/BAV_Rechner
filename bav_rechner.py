@@ -4,7 +4,7 @@ Allgemeine Informationen:
 Bei Fragen: Stephan@BI
 
 Alle Angaben ohne Gewähr!
-Bitte Änderungen ausschließlich in Personendaten.py durchführen.
+Bitte Änderungen ausschließlich in settings.py durchführen.
 '''
 
 import pandas as pd
@@ -13,7 +13,7 @@ from datetime import timedelta
 import numpy as np
 import math
 import time
-import Personendaten
+import settings
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -21,25 +21,25 @@ pd.set_option("display.max_columns", 12)
 pd.set_option("display.expand_frame_repr", False)
 
 
-Geburtsdatum = datetime.strptime(Personendaten.Geburtsdatum, '%d.%m.%Y')
-Renteneintritt = datetime.strptime(Personendaten.Renteneintritt, '%d.%m.%Y') + timedelta(days=-1)
-Bruttoeinkommen = Personendaten.Bruttoeinkommen // 12
-Bruttoeinkommen_Wachstum = Personendaten.Bruttoeinkommen_Wachstum_e
-BAV_Vertragsbeginn = datetime.strptime(Personendaten.BAV_Vertragsbeginn, '%d.%m.%Y')
-BAV_Bruttobeitrag = Personendaten.BAV_Bruttobeitrag_mtl * 12
+Geburtsdatum = datetime.strptime(settings.Geburtsdatum, '%d.%m.%Y')
+Renteneintritt = datetime.strptime(settings.Renteneintritt, '%d.%m.%Y') + timedelta(days=-1)
+Bruttoeinkommen = settings.Bruttoeinkommen // 12
+Bruttoeinkommen_Wachstum = settings.Bruttoeinkommen_Wachstum_e
+BAV_Vertragsbeginn = datetime.strptime(settings.BAV_Vertragsbeginn, '%d.%m.%Y')
+BAV_Bruttobeitrag = settings.BAV_Bruttobeitrag_mtl * 12
 BAV_Bruttoeinkommen = Bruttoeinkommen - BAV_Bruttobeitrag
 BAV_Zuschuss = 0.15
-Freistellungsauftrag = Personendaten.Freistellungsauftrag
-Kapitalmarktzins_e = Personendaten.Kapitalmarktzins_e
-ETF_TER = Personendaten.ETF_TER
-ETF_Entnahme = Personendaten.Entnahme_mtl
-RV_angesammelte_RP = Personendaten.RV_angesammelte_RP
-GKV = Personendaten.GKV
-GKV_Zusatzbeitrag = Personendaten.GKV_Zusatzbeitrag
-PKV = Personendaten.PKV
-PKV_Beitrag = Personendaten.PKV_Beitrag_mtl
-Kinder = Personendaten.Kinder
-Kirche = Personendaten.Kirche
+Freistellungsauftrag = settings.Freistellungsauftrag
+Kapitalmarktzins_e = settings.Kapitalmarktzins_e
+ETF_TER = settings.ETF_TER
+ETF_Entnahme = settings.Entnahme_mtl
+RV_angesammelte_RP = settings.RV_angesammelte_RP
+GKV = settings.GKV
+GKV_Zusatzbeitrag = settings.GKV_Zusatzbeitrag
+PKV = settings.PKV
+PKV_Beitrag = settings.PKV_Beitrag_mtl
+Kinder = settings.Kinder
+Kirche = settings.Kirche
 
 
 # Beitragssätze 2020:
