@@ -1,12 +1,10 @@
 '''
-v.0.0.1
+v.0.0.2
 Allgemeine Informationen:
 Bei Fragen: Stephan@BI
 
 Alle Angaben ohne Gewähr!
 Bitte Änderungen ausschließlich in Personendaten.py durchführen.
-Annahmen: Arbeitsort in NRW, Sozialversicherungspflichtig in D
-
 '''
 
 import pandas as pd
@@ -17,11 +15,10 @@ import math
 import time
 import Personendaten
 import warnings
-warnings.filterwarnings('ignore')
 
+warnings.filterwarnings('ignore')
 pd.set_option("display.max_columns", 12)
 pd.set_option("display.expand_frame_repr", False)
-
 
 
 Geburtsdatum = datetime.strptime(Personendaten.Geburtsdatum, '%d.%m.%Y')
@@ -43,7 +40,6 @@ PKV = Personendaten.PKV
 PKV_Beitrag = Personendaten.PKV_Beitrag_mtl
 Kinder = Personendaten.Kinder
 Kirche = Personendaten.Kirche
-
 
 
 # Beitragssätze 2020:
@@ -71,7 +67,6 @@ RV_RP_Wert = 33.05
 Abgeltungssteuer = 0.25
 
 
-
 def zins_pro_jahr_in_zins_pro_monat(zins):
     # In der Finanzmathematik hat ein Monat genau 30 Tage!
     zins = ((1 + zins) ** (1 / 12)) - 1
@@ -84,8 +79,6 @@ def zins_pro_jahr_in_zins_pro_tag(zins):
     zins = ((1 + zins) ** (1 / 360)) - 1
     
     return zins
-
-
 
 
 def calc_steuern(zvE):
@@ -322,14 +315,11 @@ def create_Prognose_df(BAV_Bruttobeitrag=0):
     df_Prognose['BAV_Jahresbrutto'] = df_Prognose['BAV_Bruttoeinkommen'].resample('Y').sum()
     df_Prognose['BAV_Jahresbrutto'].fillna(method='bfill', inplace=True)
     
-    
     '''
     Berechnet die Sozialabgaben und das Nettoeinkommen
     '''
     df_Prognose['KV'], df_Prognose['AV'], df_Prognose['PV'], df_Prognose['RV'], df_Prognose['zvE'], df_Prognose['Lohnsteuer'], df_Prognose['Soli'], df_Prognose['Kirchensteuer'], df_Prognose['Nettoeinkommen'] = zip(*df_Prognose.apply(lambda x: calc_steuern_sozialabgaben(x['Jahresbrutto'], x['Bruttoeinkommen'], x['Arbeit_vs_Rente']), axis=1))
-
     _, _, _, _, _, _, _, _, df_Prognose['BAV_Nettoeinkommen'] = zip(*df_Prognose.apply(lambda x: calc_steuern_sozialabgaben(x['BAV_Jahresbrutto'], x['BAV_Bruttoeinkommen'], x['Arbeit_vs_Rente']), axis=1))
-
 
     '''
     Berechnet den mtl. Nettoaufwand der BAV
@@ -362,7 +352,6 @@ def create_Prognose_df(BAV_Bruttobeitrag=0):
     
     df_ETF = calc_ETF_verlauf(df_ETF)
 
-
     '''
     Korrigiert das Jahresnetto um den Ertrag aus dem ETF
     '''
@@ -380,7 +369,7 @@ if __name__ == "__main__":
     print(" Die Berechnung erfolgt nach bestem Wissen und Gewissen. ")
     print("\n")
 
-    time.sleep(0)
+    time.sleep(10)
     
     df_Prognose = create_Prognose_df(BAV_Bruttobeitrag)
     print(df_Prognose)
