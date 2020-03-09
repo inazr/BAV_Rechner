@@ -166,8 +166,13 @@ def calc_ETF_verlauf(df_ETF):
     Berechnet die monatliche Nettoentnahme
     '''
     df_ETF['Jahresnetto'].fillna(method='bfill', inplace=True)
-    df_ETF['Nettoentnahme'] = df_ETF['Jahresnetto'] / 12
-    
+
+    df_ETF['Auszahlungsphase'] = np.nan
+    df_ETF['Auszahlungsphase'] = ((df_ETF['Arbeit_vs_Rente'] - 1) ** 2).resample('Y').sum()
+    df_ETF['Auszahlungsphase'] = df_ETF['Auszahlungsphase'].fillna(method='bfill') * ((df_ETF['Arbeit_vs_Rente'] - 1) ** 2)
+
+    df_ETF['Nettoentnahme'] = df_ETF['Jahresnetto'] / df_ETF['Auszahlungsphase']
+
     return df_ETF
 
 
@@ -369,7 +374,7 @@ if __name__ == "__main__":
     print(" Die Berechnung erfolgt nach bestem Wissen und Gewissen. ")
     print("\n")
 
-    time.sleep(10)
+    time.sleep(0)
     
     df_Prognose = create_Prognose_df(BAV_Bruttobeitrag)
     print(df_Prognose)
