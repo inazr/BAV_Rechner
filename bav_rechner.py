@@ -49,7 +49,7 @@ RV_Beitragssatz = 0.186
 PV_Beitragssatz = 0.0305
 Kinderlosenmalus = 0.0025
 Solidaritaetszuschlag = 0.055
-Kirchensteuer = 0.09
+Kirchensteuersatz = 0.09
 
 # Beitragsbemessungsgrenzen 2020:
 GKV_Beitragsbemessungsgrenze = 56250
@@ -106,7 +106,7 @@ def calc_steuern(zvE):
     Soli = Lohnsteuer * Solidaritaetszuschlag
 
     if Kirche:
-        Kirchensteuer = Lohnsteuer * Kirchensteuer
+        Kirchensteuer = Lohnsteuer * Kirchensteuersatz
     else:
         Kirchensteuer = 0
 
@@ -172,6 +172,10 @@ def calc_ETF_verlauf(df_ETF):
     df_ETF['Auszahlungsphase'] = df_ETF['Auszahlungsphase'].fillna(method='bfill') * ((df_ETF['Arbeit_vs_Rente'] - 1) ** 2)
 
     df_ETF['Nettoentnahme'] = df_ETF['Jahresnetto'] / df_ETF['Auszahlungsphase']
+
+    print(df_ETF['Fondswert'].iloc[-1])
+
+
 
     return df_ETF
 
@@ -385,3 +389,7 @@ if __name__ == "__main__":
 
     print('Das Nettoeinkommen im Rentenalter mit einer Anlage in einen ETF beträgt voraussichtlich: ' + round(df_Prognose['Nettoeinkommen'].iloc[-1], 2).astype(str) + ' € pro Monat.')
     print('Das Nettoeinkommen im Rentenalter mit einer Anlage in eine BAV beträgt voraussichtlich: ' +round(df_Prognose['BAV_Nettoeinkommen'].iloc[-1], 2).astype(str) + ' € pro Monat. PLUS! der Nettorente aus der BAV.')
+
+    print('Der Durchschnittliche Nettoaufwand pro Monat für die BAV Beträgt: ' + str(round(df_Prognose['Nettoaufwand'].loc[:Renteneintritt].mean().values[0], 2)) + ' €.' )
+
+    print('Der restliche Fondswert nach 30 Jahren Beträgt: ' + str(round(df_Prognose['Fondswert'].iloc[-1], 2)) + ' €.')
